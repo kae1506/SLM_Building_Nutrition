@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import time
 from pathlib import Path
@@ -77,6 +78,7 @@ def main() -> None:
 
     world_size = int(os.environ.get("WORLD_SIZE", "1"))
     gradient_accumulation = config.gradient_accumulation_steps(world_size)
+    warmup_steps = math.ceil(max_steps * float(config.training["warmup_ratio"]))
     training_args = TrainingArguments(
         output_dir=str(output_dir),
         max_steps=max_steps,
@@ -85,7 +87,7 @@ def main() -> None:
         gradient_accumulation_steps=gradient_accumulation,
         learning_rate=float(config.training["learning_rate"]),
         lr_scheduler_type="cosine",
-        warmup_ratio=float(config.training["warmup_ratio"]),
+        warmup_steps=warmup_steps,
         weight_decay=float(config.training["weight_decay"]),
         adam_beta1=float(config.training["adam_beta1"]),
         adam_beta2=float(config.training["adam_beta2"]),

@@ -1,6 +1,6 @@
 # Install the CUDA build of PyTorch appropriate for the remote machine first.
 torch>=2.5,<3
-transformers>=4.48,<6
+transformers==5.22.1
 accelerate>=1.2,<2
 datasets>=3.2,<6
 pyarrow>=18,<27
