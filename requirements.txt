@@ -1,0 +1,15 @@
+# Install the CUDA build of PyTorch appropriate for the remote machine first.
+torch>=2.5,<3
+transformers>=4.48,<6
+accelerate>=1.2,<2
+datasets>=3.2,<6
+pyarrow>=18,<27
+numpy>=1.26,<3
+PyYAML>=6.0,<7
+pandas>=2.2,<4
+ijson>=3.3,<4
+kagglehub>=1.0.3,<2
+safetensors>=0.4,<1
+tensorboard>=2.18,<3
+lm-eval[hf]>=0.4.8,<1
+pytest>=8.0,<10

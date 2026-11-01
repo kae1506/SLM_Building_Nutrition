@@ -1,0 +1,45 @@
+run_name: corpus_pass
+model_name: Qwen/Qwen2.5-0.5B
+
+paths:
+  recipe_source: data/recipes/processed/dapt-parquet
+  recipe_tokens: data/recipes/tokenized/qwen25-0.5b-seq1024
+  replay_tokens: data/recipes/tokenized/fineweb-edu-qwen25-seq1024
+  output_root: outputs
+
+data:
+  sequence_length: 1024
+  replay_ratio: 0.05
+  replay_dataset: HuggingFaceFW/fineweb-edu
+  replay_prepare_train_tokens: 40000000
+  replay_prepare_validation_tokens: 1048576
+  tokenizer_batch_size: 1000
+  token_blocks_per_shard: 16384
+  seed: 20261031
+
+training:
+  # Consumes every recipe token once in expectation, plus 5% replay.
+  token_budget: recipe_corpus
+  global_batch_sequences: 256
+  per_device_train_batch_size: 32
+  per_device_eval_batch_size: 4
+  learning_rate: 0.00002
+  warmup_ratio: 0.02
+  weight_decay: 0.1
+  adam_beta1: 0.9
+  adam_beta2: 0.95
+  adam_epsilon: 0.00000001
+  max_grad_norm: 1.0
+  eval_blocks: 4096
+  eval_steps: 250
+  save_steps: 250
+  logging_steps: 10
+  save_total_limit: 4
+  attention_implementation: sdpa
+  torch_compile: false
+  gradient_checkpointing: false
+
+benchmarks:
+  recipe_examples_per_task: 500
+  mmlu_nutrition_num_fewshot: 5
+  run_mmlu_nutrition: true
