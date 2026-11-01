@@ -79,7 +79,6 @@ def main() -> None:
     gradient_accumulation = config.gradient_accumulation_steps(world_size)
     training_args = TrainingArguments(
         output_dir=str(output_dir),
-        overwrite_output_dir=False,
         max_steps=max_steps,
         per_device_train_batch_size=int(config.training["per_device_train_batch_size"]),
         per_device_eval_batch_size=int(config.training["per_device_eval_batch_size"]),
@@ -116,7 +115,6 @@ def main() -> None:
         remove_unused_columns=False,
         torch_compile=bool(config.training["torch_compile"]),
         ddp_find_unused_parameters=False,
-        save_safetensors=True,
     )
     tokenizer = AutoTokenizer.from_pretrained(config.model_name, use_fast=True)
     if tokenizer.pad_token_id is None:
