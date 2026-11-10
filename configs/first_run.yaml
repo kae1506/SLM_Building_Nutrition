@@ -34,7 +34,6 @@ training:
   save_steps: 200
   logging_steps: 10
   save_total_limit: 3
-  attention_implementation: sdpa
   torch_compile: false
   gradient_checkpointing: false
 

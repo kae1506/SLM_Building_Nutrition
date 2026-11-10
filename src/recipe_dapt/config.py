@@ -111,7 +111,6 @@ def load_config(path: str | Path) -> ExperimentConfig:
     env_overrides = {
         "DAPT_MODEL": ("model_name", str),
         "DAPT_REPLAY_RATIO": ("data.replay_ratio", float),
-        "DAPT_ATTENTION": ("training.attention_implementation", str),
         "DAPT_TORCH_COMPILE": ("training.torch_compile", lambda x: x.lower() in {"1", "true", "yes"}),
     }
     for env_name, (dotted_key, cast) in env_overrides.items():

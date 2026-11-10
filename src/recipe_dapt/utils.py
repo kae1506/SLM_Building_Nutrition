@@ -32,12 +32,12 @@ def require_cuda_bf16() -> None:
         raise RuntimeError("The selected CUDA device does not report BF16 support")
 
 
-def discover_checkpoint(output_dir: Path) -> str | None:
-    checkpoints = []
-    for path in output_dir.glob("checkpoint-*"):
+def discover_olm_checkpoint(checkpoint_dir: Path) -> tuple[int, Path] | None:
+    checkpoints: list[tuple[int, Path]] = []
+    for path in checkpoint_dir.glob("step_*.pt"):
         try:
-            step = int(path.name.rsplit("-", 1)[1])
-        except ValueError:
+            step = int(path.stem.split("_", 1)[1])
+        except (IndexError, ValueError):
             continue
         checkpoints.append((step, path))
-    return str(max(checkpoints)[1]) if checkpoints else None
+    return max(checkpoints) if checkpoints else None

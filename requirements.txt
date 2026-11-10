@@ -13,3 +13,4 @@ safetensors>=0.4,<1
 tensorboard>=2.18,<3
 lm-eval[hf]>=0.4.8,<1
 pytest>=8.0,<10
+openlanguagemodel @ git+https://github.com/openlanguagemodel/openlanguagemodel.git@eeab195fcd3447fd5d6c39b59ca9224fb66b3ac7

@@ -1,6 +1,6 @@
-# Qwen2.5 recipe DAPT
+# Qwen2.5 recipe DAPT with OLM
 
-This is a clone-and-run domain-adaptive pretraining project for `Qwen/Qwen2.5-0.5B`. From a fresh Git checkout it downloads the text portions of Recipe1M and RecipeNLG, cleans and deduplicates them into Parquet, tokenizes with the Qwen tokenizer, packs fixed 1,024-token examples, mixes in 5% FineWeb-Edu replay, performs full-parameter causal-LM training, and writes a before/after evaluation report. Dataset files, caches, checkpoints, and environments are ignored by Git.
+This is a clone-and-run domain-adaptive pretraining project for `Qwen/Qwen2.5-0.5B`. Training uses the [Open Language Model library](https://github.com/openlanguagemodel/openlanguagemodel), pinned to a tested Git commit. From a fresh Git checkout the project downloads the text portions of Recipe1M and RecipeNLG, cleans and deduplicates them into Parquet, tokenizes with the Qwen tokenizer, packs fixed 1,024-token examples, mixes in 5% FineWeb-Edu replay, performs full-parameter causal-LM training, and writes a before/after evaluation report. Dataset files, caches, checkpoints, and environments are ignored by Git.
 
 The training data remains causal language-model text—not instruction examples. Every source document is separated by EOS before continuous packing; padding tokens are never used during training.
 
@@ -12,7 +12,7 @@ Clone the repository on the CUDA machine and run the pilot from this directory:
 ./run_short_pilot.sh
 ```
 
-That command creates `.venv` when necessary, installs the project, obtains and cleans the text datasets, prepares replay and packed tokens, runs baseline evaluation, performs DAPT, reruns evaluation, and generates the report. It automatically resumes the newest Trainer checkpoint after interruption and skips completed stages. Outputs go to `outputs/short_pilot/`; the final summary is `outputs/short_pilot/report.md`.
+That command creates `.venv` when necessary, installs the project, verifies the Hugging Face-to-OLM checkpoint bridge with a CPU smoke test, obtains and cleans the text datasets, prepares replay and packed tokens, runs baseline evaluation, performs DAPT with OLM, reruns evaluation, and generates the report. It automatically resumes the newest OLM checkpoint after interruption and skips completed stages. Outputs go to `outputs/short_pilot/`; the final summary is `outputs/short_pilot/report.md`.
 
 RecipeNLG is obtained through KaggleHub. Public downloads may work anonymously; if Kaggle asks for authentication or dataset consent, create an API token in Kaggle settings and export it before launching:
 
@@ -32,13 +32,13 @@ export DAPT_CACHE_ROOT=/scratch/$USER/recipe-dapt-cache
 
 These variables are optional. Without them, data and outputs live under `data/recipes/` and `outputs/` inside the clone.
 
-The automatically invoked `setup.sh` uses `python3` by default. To select another interpreter, run setup explicitly first:
+OLM supports Python 3.10 through 3.12. `setup.sh` first looks for a compatible local Python, then Conda, and finally a user-local `uv` Python 3.12 runtime. If the clone already contains an incompatible Python 3.14 `.venv`, setup moves it to a timestamped `.venv-incompatible-*` backup and creates the correct environment. To select a particular interpreter, run setup explicitly first:
 
 ```bash
-PYTHON_BIN=/path/to/python3.11 ./setup.sh
+PYTHON_BIN=/path/to/python3.12 ./setup.sh
 ```
 
-The setup requires Python 3.10+ and a recent NVIDIA PyTorch build. If the generic pip resolver chooses the wrong CUDA build for the machine, install the correct PyTorch wheel in `.venv` first, then rerun `.venv/bin/pip install -r requirements.txt` and `.venv/bin/pip install -e .`.
+The setup requires a recent NVIDIA PyTorch build. If the generic pip resolver chooses the wrong CUDA build for the machine, install the correct PyTorch wheel in `.venv` first, then rerun `.venv/bin/pip install -r requirements.txt` and `.venv/bin/pip install -e .`.
 
 ## Run profiles
 
@@ -85,13 +85,16 @@ HuggingFaceFW/fineweb-edu (streamed sample)
   -> Qwen tokenization + packing
   -> data/recipes/tokenized/fineweb-edu-qwen25-seq1024
 
-base model + 95% recipes + 5% replay
-  -> checkpoints + final model
+Hugging Face base checkpoint + 95% recipes + 5% replay
+  -> exact tensor conversion into OLM Qwen2Model
+  -> OLM checkpoints + final OLM state + Hugging Face export
   -> perplexity / food likelihood / MMLU Nutrition
   -> outputs/<profile>/report.md
 ```
 
 Token Parquet shards contain one fixed-size `input_ids: uint32[1024]` column. Their manifests record exact document, token, block, shard, tokenizer, and tokenizer-backend hash statistics. Raw text does not get copied into the token shards.
+
+OLM is the training implementation. Hugging Face remains the checkpoint/tokenizer interchange and evaluation format: `outputs/<profile>/final_olm/model_state.pt` is the native OLM state, while `outputs/<profile>/final/` is the equivalent Hugging Face model used by the existing evaluation and `lm-eval` stages. The setup smoke test checks tensor-name conversion, tied embeddings, SwiGLU projection order, forward-logit parity, next-token label shifting, and one OLM optimizer step before any GPU run.
 
 The Recipe1M downloader fetches the layers archive but securely extracts only `layer1.json`; it does not download the image archives. The RecipeNLG downloader requests only `RecipeNLG_dataset.csv`. Known SHA-256 checksums are verified before cleaning.
 
@@ -124,9 +127,6 @@ After the clean corpus and token manifests exist, all subsequent runs reuse them
 
 # Disable general replay for an ablation
 DAPT_REPLAY_RATIO=0 ./run_short_pilot.sh
-
-# Use FlashAttention 2 after installing flash-attn
-DAPT_ATTENTION=flash_attention_2 ./run_short_pilot.sh
 
 # Enable torch.compile after validating the ordinary pilot
 DAPT_TORCH_COMPILE=1 ./run_short_pilot.sh

@@ -76,6 +76,24 @@ class CausalLMCollator:
         }
 
 
+class OLMPackedDataset(TorchDataset):
+    """Adapt packed rows to OLM's ``(input_ids, labels)`` data contract."""
+
+    def __init__(self, dataset: TorchDataset, start_index: int = 0) -> None:
+        self.dataset = dataset
+        self.start_index = start_index
+        if not 0 <= start_index <= len(dataset):
+            raise ValueError("start_index must be within the wrapped dataset")
+
+    def __len__(self) -> int:
+        return len(self.dataset) - self.start_index
+
+    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
+        row = self.dataset[self.start_index + index]
+        input_ids = torch.tensor(row["input_ids"], dtype=torch.long)
+        return input_ids, input_ids
+
+
 def evaluation_subset(root: Path, split: str, blocks: int, seed: int) -> Dataset:
     dataset = load_packed_dataset(root, split, seed=seed)
     return dataset.select(range(min(blocks, len(dataset))))
